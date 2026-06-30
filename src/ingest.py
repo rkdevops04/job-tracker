@@ -1,5 +1,6 @@
 """Ingestion orchestrator — reads config.yaml and runs the appropriate adapter."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -8,6 +9,19 @@ import yaml
 from src.db import get_connection, init_db, mark_closed, upsert_job
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
+ENV_PATH = Path(__file__).parent.parent / ".env"
+
+
+def _load_dotenv(env_path: Path = ENV_PATH) -> None:
+    """Load KEY=VALUE pairs from .env into os.environ (no external deps)."""
+    if not env_path.exists():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 def load_config(config_path: Path = CONFIG_PATH) -> dict:
@@ -16,6 +30,7 @@ def load_config(config_path: Path = CONFIG_PATH) -> dict:
 
 
 def run_ingestion(config_path: Path = CONFIG_PATH, db_path=None) -> None:
+    _load_dotenv()
     config = load_config(config_path)
     conn_kwargs = {"db_path": db_path} if db_path else {}
     conn = get_connection(**conn_kwargs)
