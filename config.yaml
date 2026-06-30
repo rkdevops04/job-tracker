@@ -1,0 +1,12 @@
+# Companies to track. Add one entry per company.
+# ats_type: greenhouse | lever | ashby
+# ats_slug: the board token / site name used in the ATS API URL
+
+companies:
+  - name: "Acme Corp"
+    ats_type: greenhouse
+    ats_slug: "acmecorp"   # replace with real board token
+
+  # - name: "Example Co"
+  #   ats_type: lever
+  #   ats_slug: "exampleco"
