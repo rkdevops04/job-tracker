@@ -34,6 +34,10 @@ def run_ingestion(config_path: Path = CONFIG_PATH, db_path=None) -> None:
         elif ats_type == "lever":
             from src.adapters.lever import fetch_jobs  # noqa: F811
             raw_jobs = fetch_jobs(slug)
+        elif ats_type == "jsearch":
+            from src.adapters.jsearch import fetch_jobs  # noqa: F811
+            pages = company.get("pages", 1)
+            raw_jobs = fetch_jobs(slug, pages=pages)
         else:
             print(f"  [WARN] unknown ats_type '{ats_type}' — skipping", file=sys.stderr)
             continue
