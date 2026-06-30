@@ -1,12 +1,25 @@
 # Companies to track. Add one entry per company.
-# ats_type: greenhouse | lever | ashby
-# ats_slug: the board token / site name used in the ATS API URL
+#
+# ats_type: greenhouse | lever | ashby | jsearch
+#
+# For jsearch:
+#   ats_slug  = free-text search query sent to JSearch/RapidAPI
+#   pages     = number of result pages to fetch (10 results per page, default 1)
+#   Requires JSEARCH_API_KEY in your .env file.
 
 companies:
-  - name: "Acme Corp"
-    ats_type: greenhouse
-    ats_slug: "acmecorp"   # replace with real board token
+  # --- JSearch (LinkedIn / Indeed / Google Jobs) ---
+  - name: "Google SRE"
+    ats_type: jsearch
+    ats_slug: "Site Reliability Engineer at Google"
+    pages: 2
 
+  # --- Greenhouse (direct ATS feed) ---
+  # - name: "Acme Corp"
+  #   ats_type: greenhouse
+  #   ats_slug: "acmecorp"   # replace with real board token
+
+  # --- Lever ---
   # - name: "Example Co"
   #   ats_type: lever
   #   ats_slug: "exampleco"
