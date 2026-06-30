@@ -1,23 +1,36 @@
 # Companies to track. Add one entry per company.
 #
-# ats_type: greenhouse | lever | ashby | jsearch
+# ats_type: greenhouse | lever | ashby | jsearch | adzuna
+#
+# For adzuna:
+#   ats_slug  = search keywords, e.g. "site reliability engineer google"
+#   country   = two-letter country code (us, gb, au, ca …), default: us
+#   pages     = number of result pages (10 results each), default: 1
+#   Requires ADZUNA_APP_ID and ADZUNA_APP_KEY in your .env file.
 #
 # For jsearch:
-#   ats_slug  = free-text search query sent to JSearch/RapidAPI
-#   pages     = number of result pages to fetch (10 results per page, default 1)
+#   ats_slug  = free-text search query, e.g. "Site Reliability Engineer at Google"
+#   pages     = number of result pages (10 results each), default: 1
 #   Requires JSEARCH_API_KEY in your .env file.
 
 companies:
-  # --- JSearch (LinkedIn / Indeed / Google Jobs) ---
+  # --- Adzuna (aggregates LinkedIn, Indeed, company sites) ---
   - name: "Google SRE"
-    ats_type: jsearch
-    ats_slug: "Site Reliability Engineer at Google"
+    ats_type: adzuna
+    ats_slug: "site reliability engineer google"
+    country: "us"
     pages: 2
+
+  # --- JSearch via RapidAPI ---
+  # - name: "Google SRE (JSearch)"
+  #   ats_type: jsearch
+  #   ats_slug: "Site Reliability Engineer at Google"
+  #   pages: 2
 
   # --- Greenhouse (direct ATS feed) ---
   # - name: "Acme Corp"
   #   ats_type: greenhouse
-  #   ats_slug: "acmecorp"   # replace with real board token
+  #   ats_slug: "acmecorp"
 
   # --- Lever ---
   # - name: "Example Co"
