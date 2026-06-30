@@ -1,0 +1,18 @@
+# Placeholder resume — replace with your actual resume text.
+# Plain text works best for keyword matching (TICKET-06).
+# Paste the full text here; formatting does not matter.
+
+Your Name
+your.email@example.com
+
+SKILLS
+------
+Replace this section with your real skills, technologies, and keywords.
+
+EXPERIENCE
+----------
+Replace with your work history.
+
+EDUCATION
+---------
+Replace with your education details.
