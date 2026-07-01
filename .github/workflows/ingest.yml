@@ -5,14 +5,19 @@ on:
     - cron: "0 7 * * *"   # 07:00 UTC every day
   workflow_dispatch:        # allow manual trigger from GitHub UI
 
+permissions:
+  contents: write
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -33,14 +38,14 @@ jobs:
         run: PYTHONPATH=. python -m src.digest
 
       - name: Upload DB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: jobs-db-${{ github.run_id }}
           path: jobs.db
           retention-days: 90
 
       - name: Upload digest artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: digest-${{ github.run_id }}
           path: output/
@@ -50,6 +55,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add jobs.db output/ || true
-          git diff --cached --quiet || git commit -m "chore: daily ingest $(date -u +%Y-%m-%d)"
-          git push
+          git add jobs.db output/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: daily ingest $(date -u +%Y-%m-%d)"
+          git push origin HEAD:${{ github.ref_name }}
