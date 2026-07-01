@@ -69,6 +69,8 @@ resume, and generate a digest of new and open roles.
 - `country`: two-letter country code, default `us`
 - `where`: optional location filter (for example, `California`)
 - `full_time`: optional boolean full-time filter
+- `max_days_old`: optional posted-in-last-N-days filter (for example, `15`)
+- `title_keywords`: optional list to keep only matching job titles
 - `pages`: number of pages to fetch (10 results per page)
 
 Environment variables are loaded from `.env`:
@@ -109,7 +111,39 @@ The Streamlit dashboard includes:
 - **Jobs** tab: filter by company, title, location, and open status
 - **Matches** tab: ranked resume matches, score labels, and CSV export
 - **Apply Queue** tab: top actionable roles with skill-hit and skill-miss badges
+- **Resume** tab: edit plain-text resume used by matching, download TXT, and download DOCX options
 - **Reports** tab: latest generated digest and match markdown files
+
+### Resume format note
+
+- The matcher uses plain text from `resume.txt`
+- Original Word styling is preserved only in your source `.docx` file
+- `Download Updated DOCX` from the UI contains latest text content, but style is regenerated
+
+## Daily GitHub Actions flow
+
+Workflow: `.github/workflows/ingest.yml`
+
+Runs:
+
+- Daily at `07:00 UTC`
+- Manually via `workflow_dispatch`
+
+Steps:
+
+1. Checkout repository
+2. Setup Python 3.11
+3. Install dependencies
+4. Run test suite
+5. Run ingestion (`python -m src.ingest`)
+6. Generate digest (`python -m src.digest`)
+7. Upload `jobs.db` and `output/` as artifacts
+8. Commit and push updated tracking artifacts when changes exist
+
+Notes:
+
+- Workflow uses `permissions: contents: write` for CI commits
+- `git add -f jobs.db output/` is required because `jobs.db` is gitignored locally
 
 ## Project structure
 
