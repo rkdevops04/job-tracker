@@ -5,6 +5,8 @@
 # For adzuna:
 #   ats_slug  = search keywords, e.g. "site reliability engineer google"
 #   country   = two-letter country code (us, gb, au, ca …), default: us
+#   where     = optional location filter, e.g. "California" or "San Francisco"
+#   full_time = optional boolean filter for full-time roles only
 #   pages     = number of result pages (10 results each), default: 1
 #   Requires ADZUNA_APP_ID and ADZUNA_APP_KEY in your .env file.
 #
@@ -19,6 +21,8 @@ companies:
     ats_type: adzuna
     ats_slug: "site reliability engineer google"
     country: "us"
+    where: "California"
+    full_time: true
     pages: 2
 
   # --- JSearch via RapidAPI ---

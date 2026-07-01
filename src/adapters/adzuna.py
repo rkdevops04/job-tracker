@@ -12,10 +12,13 @@ Usage in config.yaml:
       ats_type: adzuna
       ats_slug: "site reliability engineer google"
       country: "us"      # optional, defaults to "us"
+            where: "California" # optional location filter (city/state)
+            full_time: true      # optional full-time only filter
       pages: 2           # optional, 10 results per page, defaults to 1
 """
 
 import os
+from typing import Optional
 
 import requests
 
@@ -34,13 +37,21 @@ def _credentials() -> tuple[str, str]:
     return app_id, app_key
 
 
-def fetch_jobs(query: str, country: str = "us", pages: int = 1) -> list[dict]:
+def fetch_jobs(
+    query: str,
+    country: str = "us",
+    pages: int = 1,
+    where: Optional[str] = None,
+    full_time: Optional[bool] = None,
+) -> list[dict]:
     """Fetch jobs matching *query* from Adzuna and normalise to common shape.
 
     Args:
         query:   Search keywords, e.g. "site reliability engineer google".
         country: Two-letter country code (us, gb, au, ca, de, …).
         pages:   Number of result pages (10 results each).
+        where:   Optional location filter, e.g. "California" or "San Francisco".
+        full_time: Optional full-time filter. True sends full_time=1.
     """
     app_id, app_key = _credentials()
 
@@ -54,6 +65,10 @@ def fetch_jobs(query: str, country: str = "us", pages: int = 1) -> list[dict]:
             "results_per_page": RESULTS_PER_PAGE,
             "content-type": "application/json",
         }
+        if where:
+            params["where"] = where
+        if full_time is True:
+            params["full_time"] = 1
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         data = response.json()

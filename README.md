@@ -86,6 +86,13 @@ pip install -e ".[dev]"
 
 python -m src.ingest        # run ingestion once
 pytest                       # run tests
+
+# Run resume-vs-job scoring agent and write output/matches_YYYY-MM-DD.md
+python -m src.agent --top 10
+
+# Run local dashboard UI
+python -m pip install ".[ui]"
+streamlit run src/ui.py
 ```
 
 ## Project structure

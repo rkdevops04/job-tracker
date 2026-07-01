@@ -47,20 +47,26 @@ def run_ingestion(config_path: Path = CONFIG_PATH, db_path=None) -> list[Snapsho
 
         try:
             if ats_type == "greenhouse":
-                from src.adapters.greenhouse import fetch_jobs
-                raw_jobs = fetch_jobs(slug)
+                from src.adapters.greenhouse import fetch_jobs as fetch_greenhouse_jobs
+
+                raw_jobs = fetch_greenhouse_jobs(slug)
             elif ats_type == "lever":
-                from src.adapters.lever import fetch_jobs  # noqa: F811
-                raw_jobs = fetch_jobs(slug)
+                from src.adapters.lever import fetch_jobs as fetch_lever_jobs
+
+                raw_jobs = fetch_lever_jobs(slug)
             elif ats_type == "jsearch":
-                from src.adapters.jsearch import fetch_jobs  # noqa: F811
-                raw_jobs = fetch_jobs(slug, pages=company.get("pages", 1))
+                from src.adapters.jsearch import fetch_jobs as fetch_jsearch_jobs
+
+                raw_jobs = fetch_jsearch_jobs(slug, pages=company.get("pages", 1))
             elif ats_type == "adzuna":
-                from src.adapters.adzuna import fetch_jobs  # noqa: F811
-                raw_jobs = fetch_jobs(
+                from src.adapters.adzuna import fetch_jobs as fetch_adzuna_jobs
+
+                raw_jobs = fetch_adzuna_jobs(
                     slug,
                     country=company.get("country", "us"),
                     pages=company.get("pages", 1),
+                    where=company.get("where"),
+                    full_time=company.get("full_time"),
                 )
             else:
                 print(f"  [WARN] unknown ats_type '{ats_type}' — skipping", file=sys.stderr)

@@ -73,6 +73,22 @@ def test_fetch_jobs_custom_country():
     assert len(jobs) == 2
 
 
+@rsps_lib.activate
+def test_fetch_jobs_with_where_filter():
+    rsps_lib.add(rsps_lib.GET, f"{ADZUNA_BASE}/us/search/1", json=FAKE_RESPONSE, status=200)
+    jobs = fetch_jobs("SRE", where="California")
+    assert len(jobs) == 2
+    assert rsps_lib.calls[0].request.params["where"] == "California"
+
+
+@rsps_lib.activate
+def test_fetch_jobs_with_full_time_filter():
+    rsps_lib.add(rsps_lib.GET, f"{ADZUNA_BASE}/us/search/1", json=FAKE_RESPONSE, status=200)
+    jobs = fetch_jobs("SRE", full_time=True)
+    assert len(jobs) == 2
+    assert rsps_lib.calls[0].request.params["full_time"] == "1"
+
+
 def test_missing_credentials_raises(monkeypatch):
     monkeypatch.delenv("ADZUNA_APP_ID", raising=False)
     monkeypatch.delenv("ADZUNA_APP_KEY", raising=False)

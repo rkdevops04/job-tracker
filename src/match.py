@@ -79,7 +79,8 @@ def score_jobs(
     """Score all open jobs against the resume and return ranked results.
 
     Returns a list of dicts sorted by score descending:
-        job_id, company, title, location, url, score, matched_keywords
+        job_id, company, title, location, url, score, matched_keywords,
+        missing_keywords
     """
     resume_text = resume_path.read_text()
     resume_tokens = _tokenise(resume_text)
@@ -122,6 +123,12 @@ def score_jobs(
             reverse=True,
         )[:10]
 
+        missing = sorted(
+            [t for t in resume_vec if t not in job_vec],
+            key=lambda t: resume_vec[t],
+            reverse=True,
+        )[:10]
+
         results.append({
             "job_id":           row["job_id"],
             "company":          row["company"],
@@ -130,6 +137,7 @@ def score_jobs(
             "url":              row["url"],
             "score":            round(score, 4),
             "matched_keywords": matched,
+            "missing_keywords": missing,
         })
 
     results.sort(key=lambda r: r["score"], reverse=True)
