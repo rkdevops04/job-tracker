@@ -7,6 +7,14 @@ resume, and generate a digest of new and open roles.
 
 ---
 
+## What it does
+
+- Ingests jobs from configured sources (currently Adzuna, Greenhouse, Lever, JSearch)
+- Stores history in SQLite with `first_seen`, `last_seen`, and open/closed state
+- Scores open jobs against your resume using TF-IDF + cosine similarity
+- Generates markdown digests and match reports
+- Provides a local Streamlit dashboard to review jobs, matches, and reports
+
 ## Architecture
 
 ```
@@ -20,13 +28,7 @@ resume, and generate a digest of new and open roles.
 │                     Ingestion Layer                             │
 │                     src/ingest.py                               │
 │                                                                 │
-│   ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐  │
-│   │  Greenhouse     │  │     Lever        │  │    Ashby      │  │
-│   │  adapter        │  │     adapter      │  │    adapter    │  │
-│   │  (TICKET-02) ✅ │  │  (TICKET-03) 🔲 │  │  (future)  🔲 │  │
-│   └────────┬────────┘  └────────┬─────────┘  └──────┬────────┘  │
-│            └───────────────────┬┘                   │           │
-│                                └────────────────────┘           │
+│   Adapters: Adzuna, Greenhouse, Lever, JSearch                  │
 └────────────────────────────────┬────────────────────────────────┘
                                  │  raw job JSON
                                  ▼
@@ -34,9 +36,9 @@ resume, and generate a digest of new and open roles.
 │                  Storage / Diff Layer                           │
 │               src/db.py  +  src/diff.py                         │
 │                                                                 │
-│  • Upserts jobs — never hard-deletes (TICKET-01) ✅             │
+│  • Upserts jobs — never hard-deletes                            │
 │  • Tracks first_seen / last_seen per job_id                     │
-│  • Marks jobs closed when absent from feed (TICKET-04) 🔲       │
+│  • Marks jobs closed when absent from feed                       │
 │  • SQLite DB retains 6+ months of history                       │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
@@ -47,10 +49,8 @@ resume, and generate a digest of new and open roles.
 │    Matching Layer        │   │         Output Layer             │
 │    src/match.py          │   │         src/digest.py            │
 │                          │   │                                  │
-│  Score open postings     │   │  Markdown report of new +        │
-│  against resume.txt      │   │  still-open postings,            │
-│  (TICKET-06) 🔲          │   │  grouped by company              │
-│                          │   │  (TICKET-07) 🔲                  │
+│  Score open postings     │   │  Markdown reports for digest +   │
+│  against resume.txt      │   │  resume matches                  │
 └──────────────────────────┘   └──────────────────────────────────┘
 ```
 
@@ -59,19 +59,23 @@ resume, and generate a digest of new and open roles.
 
 ---
 
-## Roadmap
+## Config
 
-| Ticket | Description | Branch | Status |
-|--------|-------------|--------|--------|
-| TICKET-01 | DB schema (`jobs` + `companies` tables, upsert, close) | `ticket-01/db-schema` | ✅ Done |
-| TICKET-02 | Greenhouse ingestion adapter | `ticket-02/greenhouse-adapter` | ✅ Done |
-| TICKET-03 | Lever ingestion adapter | `ticket-03/lever-adapter` | 🔲 Next |
-| TICKET-04 | Diff/snapshot logic (mark closed, never delete) | `ticket-04/diff-snapshot` | 🔲 Queued |
-| TICKET-05 | GitHub Actions daily cron + artifact upload | `ticket-05/github-actions` | 🔲 Queued |
-| TICKET-06 | Resume matching (keyword/semantic scoring) | `ticket-06/resume-matching` | 🔲 Queued |
-| TICKET-07 | Digest output (markdown report by company) | `ticket-07/digest-output` | 🔲 Queued |
+`config.yaml` supports these fields for Adzuna entries:
 
-Full ticket details in [PLAN.md](PLAN.md).
+- `name`: label used in outputs
+- `ats_type`: `adzuna`
+- `ats_slug`: search keywords (for example, `site reliability engineer google`)
+- `country`: two-letter country code, default `us`
+- `where`: optional location filter (for example, `California`)
+- `full_time`: optional boolean full-time filter
+- `pages`: number of pages to fetch (10 results per page)
+
+Environment variables are loaded from `.env`:
+
+- `ADZUNA_APP_ID`
+- `ADZUNA_APP_KEY`
+- `JSEARCH_API_KEY` (only if you enable JSearch entries)
 
 ---
 
@@ -90,10 +94,22 @@ pytest                       # run tests
 # Run resume-vs-job scoring agent and write output/matches_YYYY-MM-DD.md
 python -m src.agent --top 10
 
+# Optional: set a minimum score filter
+python -m src.agent --top 25 --min-score 0.03
+
 # Run local dashboard UI
 python -m pip install ".[ui]"
 streamlit run src/ui.py
 ```
+
+## UI workflow
+
+The Streamlit dashboard includes:
+
+- **Jobs** tab: filter by company, title, location, and open status
+- **Matches** tab: ranked resume matches, score labels, and CSV export
+- **Apply Queue** tab: top actionable roles with skill-hit and skill-miss badges
+- **Reports** tab: latest generated digest and match markdown files
 
 ## Project structure
 
@@ -104,8 +120,10 @@ streamlit run src/ui.py
 | `src/db.py` | SQLite schema + upsert helpers |
 | `src/ingest.py` | Ingestion orchestrator |
 | `src/adapters/` | One adapter per ATS (Greenhouse, Lever, …) |
-| `src/match.py` | Resume scoring (TICKET-06) |
-| `src/digest.py` | Markdown/CSV report generation (TICKET-07) |
+| `src/match.py` | Resume scoring (TF-IDF + cosine similarity) |
+| `src/agent.py` | CLI match agent, writes `output/matches_YYYY-MM-DD.md` |
+| `src/ui.py` | Streamlit dashboard for jobs/matches/reports |
+| `src/digest.py` | Markdown digest generation |
 | `.github/workflows/` | GitHub Actions (daily cron) |
 
 ## Conventions
