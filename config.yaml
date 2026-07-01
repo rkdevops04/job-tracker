@@ -7,6 +7,8 @@
 #   country   = two-letter country code (us, gb, au, ca …), default: us
 #   where     = optional location filter, e.g. "California" or "San Francisco"
 #   full_time = optional boolean filter for full-time roles only
+#   max_days_old = optional posted-in-last-N-days filter (e.g. 15)
+#   title_keywords = optional list; keeps jobs whose title contains any keyword
 #   pages     = number of result pages (10 results each), default: 1
 #   Requires ADZUNA_APP_ID and ADZUNA_APP_KEY in your .env file.
 #
@@ -17,12 +19,34 @@
 
 companies:
   # --- Adzuna (aggregates LinkedIn, Indeed, company sites) ---
-  - name: "Google SRE"
+  - name: "Google"
     ats_type: adzuna
-    ats_slug: "site reliability engineer google"
+    ats_slug: "site reliability engineer devops google"
     country: "us"
     where: "California"
     full_time: true
+    max_days_old: 15
+    title_keywords: ["site reliability", "sre", "devops", "platform", "infrastructure"]
+    pages: 2
+
+  - name: "The OCC - Dallas"
+    ats_type: adzuna
+    ats_slug: "The Options Clearing Corporation"
+    country: "us"
+    where: "Dallas"
+    full_time: true
+    max_days_old: 15
+    title_keywords: ["site reliability", "sre", "devops", "platform", "infrastructure"]
+    pages: 2
+
+  - name: "The OCC - Chicago"
+    ats_type: adzuna
+    ats_slug: "The Options Clearing Corporation"
+    country: "us"
+    where: "Chicago"
+    full_time: true
+    max_days_old: 15
+    title_keywords: ["site reliability", "sre", "devops", "platform", "infrastructure"]
     pages: 2
 
   # --- JSearch via RapidAPI ---

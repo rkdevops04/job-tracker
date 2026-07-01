@@ -12,8 +12,9 @@ Usage in config.yaml:
       ats_type: adzuna
       ats_slug: "site reliability engineer google"
       country: "us"      # optional, defaults to "us"
-            where: "California" # optional location filter (city/state)
-            full_time: true      # optional full-time only filter
+    where: "California" # optional location filter (city/state)
+    full_time: true      # optional full-time only filter
+    max_days_old: 15     # optional posted-in-last-N-days filter
       pages: 2           # optional, 10 results per page, defaults to 1
 """
 
@@ -43,6 +44,7 @@ def fetch_jobs(
     pages: int = 1,
     where: Optional[str] = None,
     full_time: Optional[bool] = None,
+    max_days_old: Optional[int] = None,
 ) -> list[dict]:
     """Fetch jobs matching *query* from Adzuna and normalise to common shape.
 
@@ -52,6 +54,7 @@ def fetch_jobs(
         pages:   Number of result pages (10 results each).
         where:   Optional location filter, e.g. "California" or "San Francisco".
         full_time: Optional full-time filter. True sends full_time=1.
+        max_days_old: Optional posted-in-last-N-days filter.
     """
     app_id, app_key = _credentials()
 
@@ -69,6 +72,8 @@ def fetch_jobs(
             params["where"] = where
         if full_time is True:
             params["full_time"] = 1
+        if max_days_old is not None:
+            params["max_days_old"] = int(max_days_old)
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         data = response.json()

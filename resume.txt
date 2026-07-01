@@ -1,18 +1,66 @@
-# Placeholder resume — replace with your actual resume text.
-# Plain text works best for keyword matching (TICKET-06).
-# Paste the full text here; formatting does not matter.
+Rakesh K
+DevOps / Site Reliability Engineer   •   Dallas, TX   •   +1 501-749-2724   •   rakesh.devops04@gmail.com
 
-Your Name
-your.email@example.com
 
-SKILLS
-------
-Replace this section with your real skills, technologies, and keywords.
+Results-driven DevOps/SRE Engineer with 7+ years of experience delivering observability, CI/CD automation, and cloud infrastructure solutions at scale. Proven track record reducing alert noise by 40%, cutting manual configuration effort by 60%, and improving incident detection across distributed systems. Deep expertise in Splunk Cloud, SignalFx, OpenTelemetry, Kubernetes, and AWS—with a strong focus on reliability, automation, and proactive monitoring.
+CERTIFICATIONS & EDUCATION
 
-EXPERIENCE
-----------
-Replace with your work history.
+Certifications: [Add your certifications here — e.g. AWS Solutions Architect, CKA, Splunk Certified Power User]
+Education: Master’s Degree in Computer Information Systems   —   Christian Brothers University, Memphis, TN, USA   (Jan 2020 – Aug 2021)
+Bachelor’s Degree in Computer Science & Engineering   —   Sri Chaitanya College of Engineering, India   (2011 – 2015)
+TECHNICAL SKILLS
 
-EDUCATION
----------
-Replace with your education details.
+
+Cloud & Infrastructure
+AWS (EC2, S3, VPC, ELB, IAM, Lambda, RDS, CloudWatch, Route 53, DynamoDB), Terraform, CloudFormation
+CI/CD & Automation
+Jenkins, Harness, GitHub Actions, Maven, TeamCity, SonarQube
+Observability
+Splunk Cloud, Splunk Observability (SignalFx), OpenTelemetry (OTEL), ELK, AppDynamics
+Containers & Orchestration
+Docker, Kubernetes, Helm, Rancher, ECS, OpenShift
+Configuration Mgmt
+Ansible, Chef, Puppet, Rundeck, HashiCorp Vault
+Languages & Scripting
+Python, Shell, Groovy
+Version Control
+GitHub, Bitbucket
+Databases
+PostgreSQL, MySQL, Oracle, SQL Server, AWS Aurora
+Messaging & Streaming
+Kafka, RabbitMQ, ActiveMQ
+Platforms
+Linux (RHEL, CentOS, Ubuntu), AWS, Azure (familiar), OpenStack
+Repositories
+Nexus, Artifactory
+PROFESSIONAL EXPERIENCE
+
+DevOps Engineer  |  The Options Clearing Corporation (OCC)  |  Feb 2023 – Present
+	•	Served as Splunk Product Owner, gathering business requirements and delivering end-to-end observability solutions using Splunk Cloud and SignalFx across 15+ applications.
+	•	Designed and implemented 25+ dashboards in Splunk Cloud and SignalFx, significantly improving system visibility and on-call efficiency.
+	•	Redesigned alerting strategy integrated with Slack, Email, and ServiceNow, reducing alert noise by 40% and improving incident response time by 30%.
+	•	Automated creation of 100+ detectors and alerting rules using Terraform, cutting manual configuration effort by 60% across multiple environments.
+	•	Implemented OpenTelemetry (OTEL) across 20+ services to unify metrics, logs, and traces—improving root cause analysis efficiency by 35%.
+	•	Developed custom application metrics (latency, error rate, throughput) and upgraded OTEL collectors to improve telemetry pipeline performance.
+	•	Deployed applications via Harness pipelines across Kubernetes clusters, on-prem nodes, and AWS EC2—ensuring consistent, reliable releases.
+	•	Managed Kubernetes clusters using Rancher; implemented HashiCorp Vault for secure secrets management.
+	•	Monitored Kafka clusters, managing topics, partitions, and replication for optimal performance.
+	•	Led P1/P2/P3 incident resolution, performing root cause analysis and implementing fixes to improve long-term system stability.
+	•	Developed custom monitoring dashboards to track DR and failover testing readiness.
+Environment: Splunk Cloud, SignalFx, OpenTelemetry, Kubernetes, Rancher, Harness, Jenkins, AWS, Terraform, Kafka, GitHub, ServiceNow
+DevOps Engineer  |  United Natural Foods Inc. (UNFI)  |  Aug 2022 – Feb 2023
+	•	Managed AWS infrastructure (EC2, VPC, ECS, S3, IAM) and deployed containerized applications across DEV/UAT/PROD environments.
+	•	Built and deployed Docker images to Artifactory; developed Terraform templates for VPCs, subnets, and load balancers.
+	•	Migrated on-prem systems to AWS using CloudEndure; automated data transfer via AWS DataSync and Transfer Family.
+	•	Migrated databases from SQL Server to PostgreSQL and AWS Aurora, reducing licensing costs and improving performance.
+	•	Implemented secure credential management using HashiCorp Vault and CyberArk.
+Environment: AWS, Terraform, Docker, Jenkins, GitLab, ECS, ECR, IAM, Vault, CyberArk
+Systems Engineer  |  The Walt Disney Company  |  Jan 2020 – Aug 2022
+	•	Led migration of on-prem infrastructure to AWS, reducing operational overhead and improving scalability.
+	•	Automated configuration management across 10,000+ nodes using Ansible, improving provisioning speed by 50%.
+	•	Built and maintained CI/CD pipelines using Jenkins; developed Terraform and CloudFormation IaC templates.
+	•	Designed and implemented secure VPC architectures with centralized logging via CloudWatch.
+	•	Configured HashiCorp Vault for secrets management; automated provisioning workflows using Rundeck.
+	•	Improved overall deployment time by 40% and automation efficiency by 50% through pipeline optimization.
+Environment: AWS, Terraform, Jenkins, Docker, Ansible, Rundeck, CloudWatch, RabbitMQ, ActiveMQ
+

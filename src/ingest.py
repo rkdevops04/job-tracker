@@ -67,7 +67,17 @@ def run_ingestion(config_path: Path = CONFIG_PATH, db_path=None) -> list[Snapsho
                     pages=company.get("pages", 1),
                     where=company.get("where"),
                     full_time=company.get("full_time"),
+                    max_days_old=company.get("max_days_old"),
                 )
+
+                # Optional post-filter: keep only titles containing configured keywords.
+                title_keywords = company.get("title_keywords") or []
+                if title_keywords:
+                    lowered_keywords = [k.lower() for k in title_keywords]
+                    raw_jobs = [
+                        job for job in raw_jobs
+                        if any(k in (job.get("title", "").lower()) for k in lowered_keywords)
+                    ]
             else:
                 print(f"  [WARN] unknown ats_type '{ats_type}' — skipping", file=sys.stderr)
                 continue

@@ -89,6 +89,14 @@ def test_fetch_jobs_with_full_time_filter():
     assert rsps_lib.calls[0].request.params["full_time"] == "1"
 
 
+@rsps_lib.activate
+def test_fetch_jobs_with_max_days_old_filter():
+    rsps_lib.add(rsps_lib.GET, f"{ADZUNA_BASE}/us/search/1", json=FAKE_RESPONSE, status=200)
+    jobs = fetch_jobs("SRE", max_days_old=15)
+    assert len(jobs) == 2
+    assert rsps_lib.calls[0].request.params["max_days_old"] == "15"
+
+
 def test_missing_credentials_raises(monkeypatch):
     monkeypatch.delenv("ADZUNA_APP_ID", raising=False)
     monkeypatch.delenv("ADZUNA_APP_KEY", raising=False)

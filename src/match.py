@@ -30,11 +30,48 @@ _STOP_WORDS = {
     "through", "during", "including", "while", "per", "other", "such",
 }
 
+# Normalize common variants so matching reflects recruiter wording better.
+_CANONICAL_TOKEN_MAP = {
+    "engineering": "engineer",
+    "eng": "engineer",
+    "devsecops": "devops",
+    "k8": "kubernetes",
+}
+
+# Boilerplate terms frequently present in postings but not actual skill requirements.
+_JOB_POST_NOISE_TERMS = {
+    "apply", "applying", "application", "applications", "applicants", "posting",
+    "posted", "position", "positions", "employment", "employee", "employees",
+    "agencies", "agency", "resumes", "resume", "unsolicited", "solicitations",
+    "referral", "workday", "careers", "site", "account", "accepted", "submit",
+    "submitted", "outside", "only", "must", "ll", "wishing", "job",
+}
+
+
+def _canonicalize(token: str) -> str:
+    return _CANONICAL_TOKEN_MAP.get(token, token)
+
 
 def _tokenise(text: str) -> list[str]:
     """Lowercase, strip punctuation, remove stop words and short tokens."""
     tokens = re.findall(r"[a-z][a-z0-9\+\#]*", text.lower())
-    return [t for t in tokens if t not in _STOP_WORDS and len(t) > 1]
+    normalized = [_canonicalize(t) for t in tokens]
+    return [t for t in normalized if t not in _STOP_WORDS and len(t) > 1]
+
+
+def _dedupe_preserve(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _is_signal_term(token: str) -> bool:
+    return token not in _JOB_POST_NOISE_TERMS and len(token) > 2
 
 
 def _term_freq(tokens: list[str]) -> dict[str, float]:
@@ -79,8 +116,8 @@ def score_jobs(
     """Score all open jobs against the resume and return ranked results.
 
     Returns a list of dicts sorted by score descending:
-        job_id, company, title, location, url, score, matched_keywords,
-        missing_keywords
+        job_id, company, title, location, url, first_seen, score,
+        matched_keywords, missing_from_resume_keywords, resume_only_keywords
     """
     resume_text = resume_path.read_text()
     resume_tokens = _tokenise(resume_text)
@@ -89,7 +126,7 @@ def score_jobs(
         raise ValueError(f"Resume at {resume_path} appears empty or has no readable text.")
 
     rows = conn.execute("""
-        SELECT job_id, company, title, location, url, raw_json
+        SELECT job_id, company, title, location, url, first_seen, raw_json
         FROM jobs
         WHERE is_open = 1
     """).fetchall()
@@ -116,18 +153,30 @@ def score_jobs(
         job_vec = _tfidf_vector(job_tokens, idf)
         score = _cosine_similarity(resume_vec, job_vec)
 
-        # Top matched keywords: resume terms present in job, sorted by weight
+        # Top matched keywords: resume terms present in job, sorted by weight.
         matched = sorted(
-            [t for t in resume_vec if t in job_vec],
+            [t for t in resume_vec if t in job_vec and _is_signal_term(t)],
             key=lambda t: resume_vec[t] * job_vec.get(t, 0),
             reverse=True,
         )[:10]
 
-        missing = sorted(
-            [t for t in resume_vec if t not in job_vec],
+        title_tokens = [t for t in _tokenise(row["title"] or "") if _is_signal_term(t)]
+        title_missing = [t for t in title_tokens if t not in resume_vec]
+
+        resume_only = sorted(
+            [t for t in resume_vec if t not in job_vec and _is_signal_term(t)],
             key=lambda t: resume_vec[t],
             reverse=True,
         )[:10]
+
+        job_missing = sorted(
+            [t for t in job_vec if t not in resume_vec and _is_signal_term(t)],
+            key=lambda t: job_vec[t],
+            reverse=True,
+        )
+
+        # Prioritize title gaps first, then strongest JD terms.
+        missing_from_resume = _dedupe_preserve(title_missing + job_missing)[:10]
 
         results.append({
             "job_id":           row["job_id"],
@@ -135,9 +184,11 @@ def score_jobs(
             "title":            row["title"],
             "location":         row["location"],
             "url":              row["url"],
+            "first_seen":       row["first_seen"],
             "score":            round(score, 4),
             "matched_keywords": matched,
-            "missing_keywords": missing,
+            "missing_from_resume_keywords": missing_from_resume,
+            "resume_only_keywords": resume_only,
         })
 
     results.sort(key=lambda r: r["score"], reverse=True)

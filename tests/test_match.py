@@ -122,3 +122,33 @@ def test_score_jobs_top_n(db, resume_file):
         _insert_job(db, f"j{i}", f"SRE {i}", "Python Kubernetes GCP")
     results = score_jobs(db, resume_path=resume_file, top_n=3)
     assert len(results) == 3
+
+
+def test_missing_from_resume_filters_boilerplate_terms(db, tmp_path):
+    resume = tmp_path / "resume.txt"
+    resume.write_text("python")
+    _insert_job(
+        db,
+        "j-noise",
+        "Software Engineer",
+        "We do not accept unsolicited resumes from staffing agencies. "
+        "This position uses Workday. Required skills: Kubernetes and AWS.",
+    )
+
+    result = score_jobs(db, resume_path=resume)[0]
+    missing = result["missing_from_resume_keywords"]
+    assert "kubernetes" in missing
+    assert "aws" in missing
+    assert "resumes" not in missing
+    assert "agencies" not in missing
+    assert "workday" not in missing
+
+
+def test_missing_from_resume_prioritizes_title_terms(db, tmp_path):
+    resume = tmp_path / "resume.txt"
+    resume.write_text("python aws")
+    _insert_job(db, "j-title", "Lead DevOps Engineer", "Platform support and operations")
+
+    result = score_jobs(db, resume_path=resume)[0]
+    missing = result["missing_from_resume_keywords"]
+    assert "devops" in missing

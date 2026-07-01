@@ -7,8 +7,11 @@ Run with:
 import csv
 import json
 import sqlite3
+import subprocess
+import tempfile
 from io import StringIO
 from pathlib import Path
+from typing import Optional
 
 import streamlit as st
 
@@ -81,6 +84,7 @@ def _fetch_jobs(
             "Location": r["location"] or "Unknown",
             "Job Type": _extract_job_type(r["raw_json"]),
             "Open": "Yes" if r["is_open"] else "No",
+            "Jon Opened": r["first_seen"],
             "First Seen": r["first_seen"],
             "Last Seen": r["last_seen"],
             "Apply URL": r["url"] or "",
@@ -117,13 +121,18 @@ def _read_latest_report(prefix: str) -> tuple[str, str]:
 
 
 def _score_label(score: float) -> str:
-    if score >= 0.2:
+    if score >= 8.0:
         return "Strong"
-    if score >= 0.1:
+    if score >= 6.0:
         return "Good"
-    if score > 0:
+    if score > 1.0:
         return "Weak"
     return "No overlap"
+
+
+def _score_1_to_10(raw_score: float) -> float:
+    """Map cosine score in [0, 1] to user-friendly [1, 10] scale."""
+    return round(1 + (9 * raw_score), 2)
 
 
 def _inject_styles() -> None:
@@ -185,8 +194,10 @@ def _matches_to_csv(rows: list[dict]) -> str:
         "company",
         "title",
         "location",
+        "opened_on",
         "matched_keywords",
-        "missing_keywords",
+        "missing_from_resume",
+        "improve_to_8",
         "apply_url",
     ]
     sio = StringIO()
@@ -200,11 +211,93 @@ def _matches_to_csv(rows: list[dict]) -> str:
             row["Company"],
             row["Title"],
             row["Location"],
+            row["Opened On"],
             row["Keywords"],
-            row["Missing"],
+            row["Missing From Resume"],
+            row["Improve To 8"],
             row["Apply URL"],
         ])
     return sio.getvalue()
+
+
+def _convert_text_to_docx_bytes(text: str) -> Optional[bytes]:
+    """Convert plain text to DOCX bytes using macOS textutil.
+
+    Note: this keeps content but not the original Word styling/template.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        in_txt = tmp_path / "resume.txt"
+        out_docx = tmp_path / "resume.docx"
+        in_txt.write_text(text)
+
+        result = subprocess.run(
+            ["textutil", "-convert", "docx", str(in_txt), "-output", str(out_docx)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0 or not out_docx.exists():
+            return None
+        return out_docx.read_bytes()
+
+
+_SKILL_CATEGORY_KEYWORDS = {
+    "Reliability": {
+        "reliability", "sre", "incident", "postmortem", "availability", "uptime", "mttr", "sla", "slo", "sli", "error"
+    },
+    "Cloud": {
+        "aws", "gcp", "azure", "cloud", "ec2", "iam", "vpc", "eks", "lambda"
+    },
+    "Containers": {
+        "kubernetes", "k8s", "docker", "helm", "container", "orchestration"
+    },
+    "Observability": {
+        "observability", "monitoring", "metrics", "alerts", "alerting", "splunk", "signalfx", "grafana", "prometheus", "cloudwatch", "logging", "tracing"
+    },
+    "Automation": {
+        "automation", "terraform", "iac", "ansible", "pipeline", "jenkins", "github", "actions", "cicd", "gitops"
+    },
+    "Platform": {
+        "platform", "infrastructure", "engineering", "devops", "network", "security", "performance", "scalability"
+    },
+}
+
+
+def _categorize_missing_keywords(missing: list[str]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for kw in missing:
+        kw_lower = kw.lower()
+        matched_category = None
+        for category, vocab in _SKILL_CATEGORY_KEYWORDS.items():
+            if any(token in kw_lower for token in vocab):
+                matched_category = category
+                break
+
+        category = matched_category or "Role Terms"
+        grouped.setdefault(category, []).append(kw)
+    return grouped
+
+
+def _improve_to_target_plan(job: dict, target_score: float = 8.0) -> str:
+    current_score = _score_1_to_10(job["score"])
+    if current_score >= target_score:
+        return "Already at/above target score. Tailor role bullets with quantified impact and ownership depth."
+
+    missing = job.get("missing_from_resume_keywords", [])
+    if not missing:
+        return "Low lexical overlap. Mirror the job terminology directly and add measurable outcomes."
+
+    grouped = _categorize_missing_keywords(missing)
+    top_categories = list(grouped.items())[:3]
+    parts = []
+    for category, words in top_categories:
+        parts.append(f"{category}: {', '.join(words[:3])}")
+
+    return (
+        "Priority gaps -> " + " | ".join(parts) + ". "
+        "To move toward 8/10, add 2-3 resume bullets using these exact terms with production outcomes "
+        "(uptime, MTTR, incident reduction, deployment speed, automation hours saved)."
+    )
 
 
 def main() -> None:
@@ -226,8 +319,8 @@ def main() -> None:
         db_path_str = st.text_input("Database path", value=str(DB_PATH))
         resume_path_str = st.text_input("Resume path", value=str(RESUME_PATH))
         top_n = st.slider("Top matches", min_value=5, max_value=100, value=25, step=5)
-        min_score = st.slider("Min match score", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
-        st.caption("Tip: start with min score 0.03 to hide weak matches.")
+        min_score = st.slider("Min match score (1-10)", min_value=1.0, max_value=10.0, value=1.0, step=0.1)
+        st.caption("Tip: start with min score 3.0 to hide weak matches.")
 
     db_path = Path(db_path_str)
     resume_path = Path(resume_path_str)
@@ -250,8 +343,8 @@ def main() -> None:
         m3.metric("Companies", summary["companies"])
         m4.metric("Latest Snapshot", summary["latest_seen"])
 
-        tab_jobs, tab_matches, tab_queue, tab_reports = st.tabs(
-            ["Jobs", "Matches", "Apply Queue", "Reports"]
+        tab_jobs, tab_matches, tab_queue, tab_resume, tab_reports = st.tabs(
+            ["Jobs", "Matches", "Apply Queue", "Resume", "Reports"]
         )
 
         with tab_jobs:
@@ -286,26 +379,29 @@ def main() -> None:
                 st.info("No jobs found for current filters.")
 
         with tab_matches:
-            filtered = [r for r in scored_jobs if r["score"] >= min_score][:top_n]
+            min_raw_score = (min_score - 1.0) / 9.0
+            filtered = [r for r in scored_jobs if r["score"] >= min_raw_score][:top_n]
 
             st.subheader(f"Matches ({len(filtered)})")
             if filtered:
                 st.bar_chart(
                     {
-                        "Score": [r["score"] for r in filtered[:15]],
+                        "Score (1-10)": [_score_1_to_10(r["score"]) for r in filtered[:15]],
                     }
                 )
 
                 match_rows = [
                     {
                         "Rank": i,
-                        "Score": r["score"],
-                        "Fit": _score_label(r["score"]),
+                        "Score": _score_1_to_10(r["score"]),
+                        "Fit": _score_label(_score_1_to_10(r["score"])),
                         "Company": r["company"],
                         "Title": r["title"],
                         "Location": r["location"] or "Unknown",
+                        "Opened On": r.get("first_seen", "-"),
                         "Keywords": ", ".join(r["matched_keywords"]),
-                        "Missing": ", ".join(r.get("missing_keywords", [])),
+                        "Missing From Resume": ", ".join(r.get("missing_from_resume_keywords", [])),
+                        "Improve To 8": _improve_to_target_plan(r, target_score=8.0),
                         "Apply URL": r["url"],
                     }
                     for i, r in enumerate(filtered, 1)
@@ -332,8 +428,10 @@ def main() -> None:
         with tab_queue:
             st.subheader("Actionable Application Queue")
             st.caption("Use this as your daily apply list: strongest matches first.")
+            st.caption("Missing from resume = terms found in the job post but not found in your resume text.")
 
-            queue = [r for r in scored_jobs if r["score"] >= min_score][:10]
+            min_raw_score = (min_score - 1.0) / 9.0
+            queue = [r for r in scored_jobs if r["score"] >= min_raw_score][:10]
 
             if not queue:
                 st.info("Queue is empty with current score filter.")
@@ -346,23 +444,91 @@ def main() -> None:
 
                     miss_badges = " ".join(
                         f'<span class="jt-badge jt-miss">{k}</span>'
-                        for k in job.get("missing_keywords", [])[:8]
+                        for k in job.get("missing_from_resume_keywords", [])[:8]
                     ) or '<span class="jt-muted">No major misses</span>'
+
+                    resume_extra_badges = " ".join(
+                        f'<span class="jt-badge jt-hit">{k}</span>'
+                        for k in job.get("resume_only_keywords", [])[:6]
+                    ) or '<span class="jt-muted">No extra strengths</span>'
 
                     st.markdown(
                         f"""
                         <div class="jt-card">
                           <b>{idx:02d}. {job['title']}</b><br/>
-                          <span class="jt-muted">{job['company']} | {job['location'] or 'Unknown'} | score {job['score']:.4f} ({_score_label(job['score'])})</span><br/>
+                                                                                                        <span class="jt-muted">{job['company']} | {job['location'] or 'Unknown'} | opened {job.get('first_seen', '-')} | score {_score_1_to_10(job['score']):.2f}/10 ({_score_label(_score_1_to_10(job['score']))})</span><br/>
                           <span class="jt-muted">Skill hits:</span><br/>
                           {hit_badges}<br/>
-                          <span class="jt-muted">Skill misses:</span><br/>
+                          <span class="jt-muted">Missing from resume:</span><br/>
                           {miss_badges}<br/>
+                          <span class="jt-muted">Resume strengths not required by this role:</span><br/>
+                          {resume_extra_badges}<br/>
+                                                    <span class="jt-muted">Improve to 8/10:</span><br/>
+                                                    <span class="jt-muted">{_improve_to_target_plan(job, target_score=8.0)}</span><br/>
                           <a href="{job['url']}" target="_blank">Open application link</a>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
+
+        with tab_resume:
+            st.subheader("Resume Editor")
+            st.caption("Edit resume content here and save to refresh future matching.")
+            st.info(
+                "Formatting note: your original DOCX keeps its font/style. "
+                "Matching runs on this plain-text resume content."
+            )
+
+            source_docx_default = "/Users/rakeshkuna/Downloads/DevOps_SRE_Resume_Updated.docx"
+            source_docx_path = st.text_input(
+                "Source DOCX path (optional)",
+                value=source_docx_default,
+                help="Use this to download the original styled Word resume from UI.",
+            )
+
+            current_resume = resume_path.read_text()
+            edited_resume = st.text_area(
+                "Resume text",
+                value=current_resume,
+                height=480,
+                help="This writes directly to the configured resume file path.",
+            )
+
+            col_save, col_reset = st.columns([1, 1])
+            with col_save:
+                if st.button("Save Resume", type="primary"):
+                    resume_path.write_text(edited_resume)
+                    st.success("Resume saved successfully.")
+                    st.rerun()
+            with col_reset:
+                st.download_button(
+                    "Download Resume",
+                    data=edited_resume,
+                    file_name=resume_path.name,
+                    mime="text/plain",
+                )
+
+            updated_docx = _convert_text_to_docx_bytes(edited_resume)
+            if updated_docx:
+                st.download_button(
+                    "Download Updated DOCX (from editor text)",
+                    data=updated_docx,
+                    file_name="resume_updated_from_editor.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+                st.caption("This file includes your latest edits, but style is regenerated from plain text.")
+
+            docx_path = Path(source_docx_path.strip()) if source_docx_path.strip() else None
+            if docx_path and docx_path.exists() and docx_path.suffix.lower() == ".docx":
+                st.download_button(
+                    "Download Source DOCX (with style)",
+                    data=docx_path.read_bytes(),
+                    file_name=docx_path.name,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+                st.caption("This keeps original style/template and may not include edits made only in this text editor.")
+            elif source_docx_path.strip():
+                st.caption("Source DOCX path not found. Update the path to enable styled DOCX download.")
 
         with tab_reports:
             digest_name, digest_text = _read_latest_report("digest")
